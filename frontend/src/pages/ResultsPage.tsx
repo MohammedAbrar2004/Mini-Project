@@ -36,14 +36,13 @@ const ResultsPage = () => {
     const fetchResult = async () => {
       try {
         setLoading(true)
-        const response = await fetch('http://localhost:8000/api/v1/verify/text', {
+        const response = await fetch('http://localhost:8000/api/fact-check', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            text: text,
-            input_type: 'claim'
+            text: text.trim()
           })
         })
 
@@ -52,10 +51,19 @@ const ResultsPage = () => {
         }
 
         const data = await response.json()
-        setResult(data)
+        // Normalize keys just in case
+        const normalized: VerificationResult = {
+          truth_score: data.truth_score ?? 0,
+          confidence_score: data.confidence_score ?? data.confidence ?? 0,
+          verdict: data.verdict ?? 'INSUFFICIENT_DATA',
+          summary: data.summary ?? '',
+          supporting_sources: data.supporting_sources ?? [],
+          contradicting_sources: data.contradicting_sources ?? [],
+          processing_time: data.processing_time ?? 0
+        }
+        setResult(normalized)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
-        // Use fallback data for demonstration
         setResult(getFallbackResult())
       } finally {
         setLoading(false)

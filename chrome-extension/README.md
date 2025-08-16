@@ -1,6 +1,9 @@
-# Veritas Fact Checker Chrome Extension
+# Veritas Chrome Extension
 
-A Chrome extension that integrates with the Veritas fact-checking API to provide real-time fact-checking of selected text on web pages.
+This extension integrates with the Veritas backend to fact-check selected text on webpages.
+
+- API base URL now uses the unified endpoint at `/api/fact-check`.
+- Ensure the FastAPI backend is running on `http://localhost:8000`.
 
 ## 🚀 Features
 

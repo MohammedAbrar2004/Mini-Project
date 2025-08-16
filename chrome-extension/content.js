@@ -54,6 +54,11 @@ function showResultPanel(result, originalText) {
   removeExistingPanel();
   isLoading = false;
   
+  // Debug logging
+  console.log('🔍 Veritas Extension - Received result:', result);
+  console.log('🔍 Veritas Extension - Matching articles:', result.matching_articles);
+  console.log('🔍 Veritas Extension - Contradicting articles:', result.contradicting_articles);
+  
   const panel = createPanel();
   const truthScore = Math.round((result.truth_score || 0) * 100);
   const confidenceScore = Math.round((result.confidence || 0) * 100);
@@ -62,6 +67,9 @@ function showResultPanel(result, originalText) {
   const truthColor = getTruthColor(truthScore);
   const confidenceColor = getConfidenceColor(confidenceScore);
   const verdictDisplay = getVerdictDisplay(result.verdict);
+  
+  // Cache indicator
+  const cacheIndicator = result.cached ? '<span class="veritas-cache-indicator">⚡ Cached</span>' : '';
   
   panel.innerHTML = `
     <div class="veritas-header">
@@ -86,6 +94,7 @@ function showResultPanel(result, originalText) {
       
       <div class="veritas-verdict ${verdictDisplay.class}">
         <strong>Verdict:</strong> ${verdictDisplay.text}
+        ${cacheIndicator}
       </div>
       
       <div class="veritas-sources">
@@ -222,14 +231,21 @@ function formatSources(sources) {
     return '<p class="veritas-no-sources">No sources found</p>';
   }
   
-  return sources.slice(0, 3).map(source => `
-    <div class="veritas-source">
-      <a href="${source.url || '#'}" target="_blank" rel="noopener">
-        ${source.title || 'Untitled'}
-      </a>
-      <small>${source.source || 'Unknown source'}</small>
-    </div>
-  `).join('');
+  return sources.slice(0, 3).map(source => {
+    // Handle both old and new source formats
+    const title = source.title || source.source || 'Untitled';
+    const sourceName = source.source || 'Unknown source';
+    const url = source.url || '#';
+    
+    return `
+      <div class="veritas-source">
+        <a href="${url}" target="_blank" rel="noopener">
+          ${title}
+        </a>
+        <small>${sourceName}</small>
+      </div>
+    `;
+  }).join('');
 }
 
 // Toggle main panel (for extension icon click)

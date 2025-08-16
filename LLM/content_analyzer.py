@@ -129,53 +129,71 @@ class ContentAnalyzer:
         neutral = []
         
         claim_lower = claim.lower()
+        claim_neg = self._has_negation(claim_lower)
+        claim_entities = set(self._extract_simple_entities(claim_lower))
         
         for article in articles:
             article_dict = self._article_to_dict(article)
             
-            # Calculate semantic similarity
             similarity_score = self._calculate_semantic_similarity(claim, article.content)
             article_dict['similarity_score'] = similarity_score
             
-            # Analyze stance using multiple methods
             stance_score = self._analyze_stance(claim, article.content)
             article_dict['stance_score'] = stance_score
             
-            # Categorize based on stance score
+            content_lower = (article.content or '').lower()
+            content_neg = self._has_negation(content_lower)
+            content_entities = set(self._extract_simple_entities(content_lower))
+            
+            # Entity mismatch penalty: if main entities don't overlap, reduce stance confidence
+            entity_overlap = len(claim_entities & content_entities)
+            if entity_overlap == 0 and similarity_score < 0.7:
+                stance_score *= 0.5
+            
+            # Negation flip: if polarity differs and similarity is decent, flip towards contradiction
+            if claim_neg != content_neg and similarity_score >= 0.5:
+                stance_score = min(-abs(stance_score), -0.3)
+            
+            # Categorize
             if stance_score > 0.3:
+                article_dict['stance'] = 'supporting'
                 supporting.append(article_dict)
             elif stance_score < -0.3:
+                article_dict['stance'] = 'contradicting'
                 contradicting.append(article_dict)
             else:
+                article_dict['stance'] = 'neutral'
                 neutral.append(article_dict)
         
         return supporting, contradicting, neutral
     
+    def _has_negation(self, text: str) -> bool:
+        tokens = set(re.findall(r"\b[\w'-]+\b", text))
+        neg = {"not", "no", "never", "without", "false", "deny", "denies", "refute", "refutes", "debunk", "myth"}
+        return any(t in tokens for t in neg)
+    
+    def _extract_simple_entities(self, text: str) -> List[str]:
+        # Lightweight entity proxy: proper nouns and capitalized words
+        return re.findall(r"\b[A-Z][a-zA-Z0-9_-]{2,}\b", text)
+    
     def _analyze_stance(self, claim: str, content: str) -> float:
-        """Analyze stance of content towards claim (-1 to 1)"""
+        """Analyze stance of content towards claim (-1 to 1) with negation and fuzzy cues."""
         if not content:
             return 0.0
         
         claim_lower = claim.lower()
         content_lower = content.lower()
         
-        # Keywords that indicate support
         support_keywords = ['confirm', 'verify', 'true', 'accurate', 'correct', 'validates', 'supports']
-        contradict_keywords = ['false', 'fake', 'incorrect', 'debunk', 'refute', 'deny', 'dispute']
+        contradict_keywords = ['false', 'fake', 'incorrect', 'debunk', 'refute', 'deny', 'dispute', 'not']
         
         support_count = sum(1 for keyword in support_keywords if keyword in content_lower)
         contradict_count = sum(1 for keyword in contradict_keywords if keyword in content_lower)
         
-        # Calculate fuzzy string similarity
         fuzzy_similarity = fuzz.partial_ratio(claim_lower, content_lower) / 100.0
         
-        # Combine signals
-        if support_count > contradict_count:
-            return min(0.8, fuzzy_similarity + (support_count * 0.1))
-        elif contradict_count > support_count:
-            return max(-0.8, -fuzzy_similarity - (contradict_count * 0.1))
-        else:
-            return fuzzy_similarity * 0.5 - 0.25  # Slight negative bias for neutral
+        score = (support_count - contradict_count) * 0.15 + (fuzzy_similarity - 0.5) * 0.6
+        return max(-1.0, min(1.0, score))
     
     def _calculate_semantic_similarity(self, claim: str, content: str) -> float:
         """Calculate semantic similarity between claim and content"""

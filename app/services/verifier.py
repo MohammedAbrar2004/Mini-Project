@@ -2,11 +2,21 @@ import logging
 from typing import Dict, Any
 import uuid
 import time
+import os
+import sys
 
 from app.services import preprocessor, scraper, matcher
 from app.models.schemas import VerificationRequest
 
 logger = logging.getLogger(__name__)
+
+# Add LLM folder to path to use source weighting logic
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'LLM'))
+try:
+    from news_source_weights import news_weights  # type: ignore
+except Exception as e:
+    news_weights = None  # type: ignore
+    logger.warning(f"Source weighting unavailable, falling back to count-based scoring: {e}")
 
 
 def calculate_verdict(confidence_score: float, truth_score: float) -> str:
@@ -30,13 +40,69 @@ def calculate_verdict(confidence_score: float, truth_score: float) -> str:
         return "INSUFFICIENT_DATA"
 
 
+def _compute_weighted_scores(claim_text: str, support: list, contradict: list) -> Dict[str, float]:
+    """Compute weighted truth and confidence using enhanced source weights and balanced scoring."""
+    all_articles = support + contradict
+    if not all_articles:
+        return {"truth": 0.0, "confidence": 10.0}  # minimal confidence
+
+    try:
+        # Import the enhanced source weights system
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'LLM'))
+        from news_source_weights import source_weights
+        
+        # Detect regions in the claim
+        detected_regions = source_weights.regional_matcher.detect_news_region(claim_text)
+        
+        # Use balanced scoring for both supporting and contradicting articles
+        support_score = source_weights.calculate_balanced_score(support, detected_regions) if support else 0.0
+        contradict_score = source_weights.calculate_balanced_score(contradict, detected_regions) if contradict else 0.0
+        
+        # Calculate truth score based on balanced scoring
+        total_score = support_score + contradict_score
+        if total_score > 0:
+            truth = (support_score / total_score) * 100.0
+        else:
+            truth = 0.0
+        
+        # Calculate confidence based on quantity, diversity, and recency
+        quantity_score = min(len(all_articles) / 8.0, 1.0)  # up to 8 articles
+        unique_sources = len(set(a.get("source", "") for a in all_articles))
+        diversity_score = min(unique_sources / 4.0, 1.0) if unique_sources else 0.0
+        
+        # Calculate average recency
+        recencies = []
+        for a in all_articles:
+            recency = source_weights.calculate_recency_factor(a.get("published_date", ""))
+            recencies.append(recency)
+        avg_recency = sum(recencies) / len(recencies) if recencies else 0.5
+        
+        # Weighted confidence calculation
+        confidence = (0.4 * quantity_score + 0.3 * diversity_score + 0.3 * avg_recency) * 100.0
+        
+        return {"truth": truth, "confidence": confidence}
+        
+    except Exception as e:
+        # Fallback to count-based scoring if enhanced system fails
+        s = len(support)
+        t = len(support) + len(contradict)
+        truth = (s / t * 100.0) if t > 0 else 0.0
+        
+        quantity_score = min(len(all_articles) / 10.0, 1.0)
+        confidence = quantity_score * 100.0
+        
+        return {"truth": truth, "confidence": confidence}
+
+
 def verify_claim(request: VerificationRequest) -> Dict[str, Any]:
     """
     Main orchestrator for verifying claims:
     1. Preprocess claim
     2. Fetch articles
     3. Match semantically
-    4. Score based on matches
+    4. Score based on matches (weighted by credibility, expertise, region, recency)
     """
     claim_id = str(uuid.uuid4())
     logger.info(f"🆔 Verifying claim {claim_id}: {request.text}")
@@ -61,29 +127,18 @@ def verify_claim(request: VerificationRequest) -> Dict[str, Any]:
     match_elapsed = time.time() - match_start
     logger.info(f"⏱️ Matching time: {match_elapsed:.2f}s")
 
-    # Step 4: Score - New Computation Logic
-    logger.info("\n🎯 [STEP 4] Calculating Truth Score...")
+    # Step 4: Weighted Score
+    logger.info("\n🎯 [STEP 4] Calculating Weighted Scores...")
+    scores = _compute_weighted_scores(request.text, support, contradict)
+    truth_score = scores["truth"]
+    confidence_score = scores["confidence"]
 
-    # New Logic: x = articles with same meaning/intent, y = total contextual articles
-    # For now, we'll use supporting articles as "same meaning" and total as contextual
-    x = len(support)  # Articles that report the same thing (same meaning and intent)
-    y = len(support) + len(contradict)  # Total articles within context (70% threshold)
+    logger.info(f"📊 Supporting articles: {len(support)}")
+    logger.info(f"📊 Contradicting articles: {len(contradict)}")
+    logger.info(f"🎯 Truth Score (weighted): {truth_score:.1f}%")
+    logger.info(f"🎯 Confidence Score (composite): {confidence_score:.1f}%")
 
-    # Truth Score = x/y * 100
-    truth_score = (x / y * 100) if y > 0 else 0.0
-
-    # Confidence Score Logic
-    if y >= 10:
-        confidence_score = 100.0
-    else:
-        confidence_score = (y / 10) * 100
-
-    logger.info(f"📊 Supporting articles (x): {x}")
-    logger.info(f"📊 Total contextual articles (y): {y}")
-    logger.info(f"🎯 Truth Score: {truth_score:.1f}%")
-    logger.info(f"🎯 Confidence Score: {confidence_score:.1f}%")
-
-    # Verdict Calculation based on new criteria
+    # Verdict Calculation
     verdict = calculate_verdict(confidence_score, truth_score)
     logger.info(f"⚖️ Verdict: {verdict}")
 
@@ -92,7 +147,7 @@ def verify_claim(request: VerificationRequest) -> Dict[str, Any]:
         return {
             "url": article.get("link", ""),
             "title": article.get("title", ""),
-            "content": article.get("snippet", ""),  # Use snippet as content for now
+            "content": article.get("snippet", ""),
             "source": article.get("source", "Unknown"),
             "published_date": article.get("published_date", "Unknown"),
             "author": article.get("author"),
@@ -105,8 +160,8 @@ def verify_claim(request: VerificationRequest) -> Dict[str, Any]:
     return {
         "claim_id": claim_id,
         "preprocessing": preprocessing,
-        "truth_score": round(truth_score / 100, 4),  # Convert back to 0-1 scale for API compatibility
-        "confidence": round(confidence_score / 100, 2),  # Convert back to 0-1 scale for API compatibility
+        "truth_score": round(truth_score / 100, 4),
+        "confidence": round(confidence_score / 100, 2),
         "verdict": verdict,
         "matching_articles": transformed_support,
         "contradicting_articles": transformed_contradict,

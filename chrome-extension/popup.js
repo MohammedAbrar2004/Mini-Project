@@ -1,7 +1,7 @@
 // Popup script for Veritas Fact Checker Extension
 // Handles popup interface, status checking, and quick testing
 
-const API_BASE_URL = 'http://localhost:8000/api/v1/verify';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 document.addEventListener('DOMContentLoaded', async () => {
     await checkAPIStatus();
@@ -14,7 +14,7 @@ async function checkAPIStatus() {
     const statusText = document.getElementById('statusText');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/status`, {
+        const response = await fetch(`${API_BASE_URL}/v1/verify/status`, {
             method: 'GET',
             timeout: 5000
         });
@@ -88,7 +88,7 @@ async function handleTestFactCheck() {
 // Show test result
 function showTestResult(result, originalText) {
     const truthScore = Math.round((result.truth_score || 0) * 100);
-    const confidenceScore = Math.round((result.confidence || 0) * 100);
+    const confidenceScore = Math.round(((result.confidence_score ?? result.confidence) || 0) * 100);
     
     const resultMessage = `
 Test Result for: "${originalText}"
@@ -97,8 +97,8 @@ Truth Score: ${truthScore}%
 Confidence: ${confidenceScore}%
 Verdict: ${result.verdict || 'Unknown'}
 
-Supporting Sources: ${result.matching_articles?.length || 0}
-Contradicting Sources: ${result.contradicting_articles?.length || 0}
+Supporting Sources: ${result.supporting_sources?.length || 0}
+Contradicting Sources: ${result.contradicting_sources?.length || 0}
 
 Processing Time: ${result.processing_time || 0}s
     `.trim();

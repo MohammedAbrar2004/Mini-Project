@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, ExternalLink, Eye, X, RefreshCw, AlertCircle } from 'lucide-react'
 import { newsService, NewsArticle } from '../services/newsService'
 
@@ -55,177 +55,6 @@ const WebsitePreview = ({ url, title, onClose }: WebsitePreviewProps) => {
       </div>
     </div>
   )
-}
-
-const mockNews: { [key: string]: NewsItem[] } = {
-  politics: [
-    {
-      id: '1',
-      title: 'Global Climate Summit Reaches Historic Agreement',
-      summary: 'World leaders unite on unprecedented climate action plan with binding commitments for carbon neutrality by 2050.',
-      category: 'politics',
-      source: 'Reuters',
-      publishedAt: '2025-01-18T10:00:00Z'
-    },
-    {
-      id: '2',
-      title: 'Trade Relations Show Signs of Improvement',
-      summary: 'Diplomatic talks yield positive results in ongoing trade negotiations.',
-      category: 'politics',
-      source: 'Associated Press',
-      publishedAt: '2025-01-18T09:30:00Z'
-    },
-    {
-      id: '3',
-      title: 'Election Security Measures Enhanced',
-      summary: 'New cybersecurity protocols implemented nationwide.',
-      category: 'politics',
-      source: 'BBC News',
-      publishedAt: '2025-01-18T08:45:00Z'
-    },
-    {
-      id: '4',
-      title: 'Infrastructure Bill Passes Final Vote',
-      summary: 'Landmark legislation promises major improvements to national infrastructure.',
-      category: 'politics',
-      source: 'CNN',
-      publishedAt: '2025-01-18T08:00:00Z'
-    },
-    {
-      id: '5',
-      title: 'International Peace Talks Resume',
-      summary: 'Diplomatic efforts continue with renewed optimism for resolution.',
-      category: 'politics',
-      source: 'The Guardian',
-      publishedAt: '2025-01-18T07:30:00Z'
-    }
-  ],
-  economics: [
-    {
-      id: '6',
-      title: 'Stock Markets Reach Record Highs',
-      summary: 'Technology sector leads unprecedented growth as markets surge to new peaks amid investor optimism.',
-      category: 'economics',
-      source: 'Financial Times',
-      publishedAt: '2025-01-18T10:15:00Z'
-    },
-    {
-      id: '7',
-      title: 'Cryptocurrency Regulation Framework Announced',
-      summary: 'New guidelines provide clarity for digital asset markets.',
-      category: 'economics',
-      source: 'Wall Street Journal',
-      publishedAt: '2025-01-18T09:45:00Z'
-    },
-    {
-      id: '8',
-      title: 'Unemployment Rates Hit Decade Low',
-      summary: 'Job market shows remarkable recovery with strong hiring trends.',
-      category: 'economics',
-      source: 'Bloomberg',
-      publishedAt: '2025-01-18T09:00:00Z'
-    },
-    {
-      id: '9',
-      title: 'Green Energy Investment Soars',
-      summary: 'Renewable energy sector attracts record funding levels.',
-      category: 'economics',
-      source: 'Reuters',
-      publishedAt: '2025-01-18T08:30:00Z'
-    },
-    {
-      id: '10',
-      title: 'Housing Market Shows Stability',
-      summary: 'Real estate prices stabilize after months of volatility.',
-      category: 'economics',
-      source: 'CNBC',
-      publishedAt: '2025-01-18T08:00:00Z'
-    }
-  ],
-  celebrity: [
-    {
-      id: '11',
-      title: 'Hollywood Stars Launch Charity Initiative',
-      summary: 'A-list celebrities unite for global education fund, raising millions for underprivileged children worldwide.',
-      category: 'celebrity',
-      source: 'Entertainment Weekly',
-      publishedAt: '2025-01-18T11:00:00Z'
-    },
-    {
-      id: '12',
-      title: 'Music Industry Embraces AI Technology',
-      summary: 'Artists explore new creative possibilities with artificial intelligence.',
-      category: 'celebrity',
-      source: 'Rolling Stone',
-      publishedAt: '2025-01-18T10:30:00Z'
-    },
-    {
-      id: '13',
-      title: 'Film Festival Announces Lineup',
-      summary: 'International cinema showcase features diverse storytelling.',
-      category: 'celebrity',
-      source: 'Variety',
-      publishedAt: '2025-01-18T10:00:00Z'
-    },
-    {
-      id: '14',
-      title: 'Fashion Week Highlights Sustainability',
-      summary: 'Designers showcase eco-friendly collections and practices.',
-      category: 'celebrity',
-      source: 'Vogue',
-      publishedAt: '2025-01-18T09:30:00Z'
-    },
-    {
-      id: '15',
-      title: 'Celebrity Chef Opens New Restaurant',
-      summary: 'Michelin-starred venue focuses on local and organic ingredients.',
-      category: 'celebrity',
-      source: 'Food & Wine',
-      publishedAt: '2025-01-18T09:00:00Z'
-    }
-  ],
-  sports: [
-    {
-      id: '16',
-      title: 'Championship Finals Set Record Viewership',
-      summary: 'Historic match draws global audience as underdog team advances to finals in stunning upset victory.',
-      category: 'sports',
-      source: 'ESPN',
-      publishedAt: '2025-01-18T11:30:00Z'
-    },
-    {
-      id: '17',
-      title: 'Olympic Preparations Underway',
-      summary: 'Athletes gear up for upcoming games with intensive training.',
-      category: 'sports',
-      source: 'Sports Illustrated',
-      publishedAt: '2025-01-18T11:00:00Z'
-    },
-    {
-      id: '18',
-      title: 'New Stadium Opens to Fanfare',
-      summary: 'State-of-the-art facility features cutting-edge technology.',
-      category: 'sports',
-      source: 'The Athletic',
-      publishedAt: '2025-01-18T10:30:00Z'
-    },
-    {
-      id: '19',
-      title: 'Rookie Breaks Long-Standing Record',
-      summary: 'Young athlete achieves milestone in debut professional season.',
-      category: 'sports',
-      source: 'Fox Sports',
-      publishedAt: '2025-01-18T10:00:00Z'
-    },
-    {
-      id: '20',
-      title: 'Team Announces New Coaching Staff',
-      summary: 'Management changes signal new direction for franchise.',
-      category: 'sports',
-      source: 'CBS Sports',
-      publishedAt: '2025-01-18T09:30:00Z'
-    }
-  ]
 }
 
 const NewsDashboard = () => {
@@ -344,6 +173,10 @@ const NewsDashboard = () => {
     return generatePlaceholderImage(category, article.title, index)
   }
 
+  // Stable memoized arrays to avoid re-renders when slide changes
+  const currentCategory = useMemo(() => categories[currentSlide], [currentSlide])
+  const currentNews = newsData[currentCategory] || []
+
   // Fetch news data from API
   const fetchNewsData = async () => {
     try {
@@ -425,9 +258,6 @@ const NewsDashboard = () => {
     const interval = setInterval(nextSlide, 8000) // Auto-advance every 8 seconds
     return () => clearInterval(interval)
   }, [])
-
-  const currentCategory = categories[currentSlide]
-  const currentNews = newsData[currentCategory] || []
 
   if (loading) {
     return (
@@ -547,6 +377,8 @@ const NewsDashboard = () => {
                           onLoadStart={() => handleImageLoadStart(currentNews[0].id)}
                           onLoad={() => handleImageLoadSuccess(currentNews[0].id)}
                           loading="lazy"
+                          decoding="async"
+                          fetchpriority="low"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
 
@@ -616,6 +448,8 @@ const NewsDashboard = () => {
                             onLoadStart={() => handleImageLoadStart(item.id)}
                             onLoad={() => handleImageLoadSuccess(item.id)}
                             loading="lazy"
+                            decoding="async"
+                            fetchpriority="low"
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20"></div>
                         </div>

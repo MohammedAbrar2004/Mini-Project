@@ -155,18 +155,30 @@ def fetch_articles_from_google(query: str, num_results: int = 8) -> List[Dict]:
             return []
 
         articles = []
-        for item in data["items"][:num_results]:
+        seen_links = set()
+        for item in data["items"][:num_results * 2]:  # over-fetch then filter
+            link = item.get("link")
+            if not link or link in seen_links:
+                continue
+            seen_links.add(link)
+            snippet = item.get("snippet", "") or ""
+            if len(snippet) < 80:  # low-content early skip
+                continue
+
             # Extract source name from URL or displayLink
             source = extract_source_name(item.get("link", ""), item.get("displayLink", ""))
 
             articles.append({
                 "title": item.get("title"),
-                "snippet": item.get("snippet"),
-                "link": item.get("link"),
+                "snippet": snippet,
+                "link": link,
                 "source": source,
                 "displayLink": item.get("displayLink"),
                 "published_date": extract_published_date(item),
             })
+
+            if len(articles) >= num_results:
+                break
 
         logger.info(f"✅ Retrieved {len(articles)} articles.")
         return articles

@@ -106,8 +106,21 @@ class EnhancedWebScraper:
                 elif isinstance(result, Exception):
                     logger.warning(f"⚠️ Scraping task failed: {result}")
         
+        # Early filter: remove low-content and very low-credibility items before heavy extraction
+        filtered_initial: List[EnhancedArticle] = []
+        seen_urls: Set[str] = set()
+        for a in all_articles:
+            if not a.url or a.url in seen_urls:
+                continue
+            seen_urls.add(a.url)
+            if len((a.content or a.snippet or "")) < config.CONTENT_MIN_LENGTH:
+                continue
+            if a.credibility_score < 0.35:
+                continue
+            filtered_initial.append(a)
+        
         # Post-process articles
-        enhanced_articles = await self._enhance_articles(all_articles)
+        enhanced_articles = await self._enhance_articles(filtered_initial)
         
         # Remove duplicates and filter
         unique_articles = self._deduplicate_articles(enhanced_articles)

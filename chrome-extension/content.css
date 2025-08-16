@@ -287,3 +287,21 @@
 .veritas-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8 !important;
 }
+
+/* Cache indicator styles */
+.veritas-cache-indicator {
+  display: inline-block !important;
+  margin-left: 8px !important;
+  padding: 2px 6px !important;
+  background: #10b981 !important;
+  color: white !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  animation: pulse 2s infinite !important;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}

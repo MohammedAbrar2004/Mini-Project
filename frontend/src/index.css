@@ -1,5 +1,5 @@
 /* Newspaper Theme - Global Styles */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Merriweather:wght@300;400;700;900&family=Oswald:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;500;700;900&display=swap');
+/* Google Fonts loaded via index.html with preconnects for better performance */
 
 @tailwind base;
 @tailwind components;
@@ -99,7 +99,8 @@ body {
 .newspaper-divider {
   height: 2px;
   background-color: var(--newspaper-black);
-  margin: 1rem 0;
+  margin: 1rem auto;
+  display: block;
 }
 
 .newspaper-column {
